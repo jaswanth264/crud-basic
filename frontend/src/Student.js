@@ -5,23 +5,19 @@ import { Link } from 'react-router-dom';
 function Student() {
   const [students, setStudents] = useState([]);
 
-  const API_URL = process.env.REACT_APP_API_URL;
-
   useEffect(() => {
-    axios.get(`${API_URL}/`)
+    axios.get(`${process.env.REACT_APP_API_URL}/`)
       .then(res => setStudents(res.data))
-      .catch(err => console.error(err));
-  }, [API_URL]);
+      .catch(err => console.error('Error fetching students:', err));
+  }, []);
 
   const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
-      axios.delete(`${API_URL}/delete/${id}`)
+      axios.delete(`${process.env.REACT_APP_API_URL}/delete/${id}`)
         .then(() => {
           setStudents(students.filter(student => student.id !== id));
         })
-        .catch(err => {
-          console.error('Error deleting student:', err);
-        });
+        .catch(err => console.error('Error deleting student:', err));
     }
   };
 
@@ -29,7 +25,6 @@ function Student() {
     <div className='d-flex vh-100 bg-primary justify-content-center align-items-center'>
       <div className='w-50 bg-white rounded p-3'>
         <Link to='/create' className="btn btn-success mb-3">Add +</Link>
-
         <table className='table table-bordered'>
           <thead>
             <tr>
@@ -44,11 +39,8 @@ function Student() {
                 <td>{student.name}</td>
                 <td>{student.email}</td>
                 <td>
-                  <Link to={`update/${student.id}`} className='btn btn-primary'>Update</Link>
-                  <button
-                    className='btn btn-danger ms-2'
-                    onClick={() => handleDelete(student.id)}
-                  >
+                  <Link to={`/update/${student.id}`} className='btn btn-primary'>Update</Link>
+                  <button className='btn btn-danger ms-2' onClick={() => handleDelete(student.id)}>
                     Delete
                   </button>
                 </td>

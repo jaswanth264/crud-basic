@@ -8,22 +8,22 @@ function UpdateStudent() {
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
 
-  const API_URL = process.env.REACT_APP_API_URL;
-
   useEffect(() => {
-    axios.get(`${API_URL}/student/${id}`)
+    axios.get(`${process.env.REACT_APP_API_URL}/student/${id}`)
       .then(res => {
-        const student = res.data;
-        setName(student.name);
-        setEmail(student.email);
+        setName(res.data.name);
+        setEmail(res.data.email);
       })
       .catch(err => console.error('Error fetching student:', err));
-  }, [id, API_URL]);
+  }, [id]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    axios.put(`${API_URL}/update/${id}`, { name, email })
-      .then(() => navigate('/'))
+    axios.put(`${process.env.REACT_APP_API_URL}/update/${id}`, { name, email })
+      .then(res => {
+        console.log('Student updated:', res.data);
+        navigate('/');
+      })
       .catch(err => console.error('Error updating student:', err));
   };
 
@@ -33,28 +33,14 @@ function UpdateStudent() {
         <form onSubmit={handleSubmit}>
           <h3 className="mb-4 text-center">Update Student</h3>
           <div className="form-group mb-3">
-            <label htmlFor="name" className="form-label">Name</label>
-            <input
-              type="text"
-              id="name"
-              className="form-control"
-              placeholder="Enter Student Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
+            <label>Name</label>
+            <input type="text" className="form-control" required
+              value={name} onChange={e => setName(e.target.value)} />
           </div>
           <div className="form-group mb-3">
-            <label htmlFor="email" className="form-label">Email</label>
-            <input
-              type="email"
-              id="email"
-              className="form-control"
-              placeholder="Enter Student Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+            <label>Email</label>
+            <input type="email" className="form-control" required
+              value={email} onChange={e => setEmail(e.target.value)} />
           </div>
           <button type="submit" className="btn btn-success w-100">Update</button>
         </form>
