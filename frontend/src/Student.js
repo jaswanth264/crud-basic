@@ -5,17 +5,17 @@ import { Link } from 'react-router-dom';
 function Student() {
   const [students, setStudents] = useState([]);
 
-  // Fetch students data
+  const API_URL = process.env.REACT_APP_API_URL;
+
   useEffect(() => {
-    axios.get('http://localhost:8000/')
+    axios.get(`${API_URL}/`)
       .then(res => setStudents(res.data))
       .catch(err => console.error(err));
-  }, []);
+  }, [API_URL]);
 
-  // Handle delete
   const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this student?')) {
-      axios.delete(`http://localhost:8000/delete/${id}`)
+      axios.delete(`${API_URL}/delete/${id}`)
         .then(() => {
           setStudents(students.filter(student => student.id !== id));
         })

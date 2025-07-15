@@ -3,35 +3,28 @@ import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 
 function UpdateStudent() {
-  const { id } = useParams();  
+  const { id } = useParams();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
 
+  const API_URL = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
-    axios.get(`http://localhost:8000/student/${id}`)
-      .then((res) => {
+    axios.get(`${API_URL}/student/${id}`)
+      .then(res => {
         const student = res.data;
-        setName(student.name);  
+        setName(student.name);
         setEmail(student.email);
       })
-      .catch((err) => {
-        console.error('Error fetching student:', err);
-      });
-  }, [id]);
+      .catch(err => console.error('Error fetching student:', err));
+  }, [id, API_URL]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    axios.put(`http://localhost:8000/update/${id}`, { name, email })
-      .then((res) => {
-        console.log('Student updated:', res.data);
-        navigate('/');  
-      })
-      .catch((err) => {
-        console.error('Error updating student:', err);
-      });
+    axios.put(`${API_URL}/update/${id}`, { name, email })
+      .then(() => navigate('/'))
+      .catch(err => console.error('Error updating student:', err));
   };
 
   return (
@@ -63,7 +56,6 @@ function UpdateStudent() {
               required
             />
           </div>
-
           <button type="submit" className="btn btn-success w-100">Update</button>
         </form>
       </div>
