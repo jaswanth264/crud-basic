@@ -3,89 +3,95 @@ const cors = require('cors');
 const { Pool } = require('pg');
 
 const app = express();
+const PORT = process.env.PORT || 8000;
+
+// Middleware
 app.use(cors());
-app.use(express.json());  // to parse JSON body
+app.use(express.json());
 
-const db = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'crud_app',
-  password: 'jaswanth',
-  port: 5432
+// Database connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
-app.get('/', (req, res) => {
-  const pgql = "SELECT * FROM users"; 
-  db.query(pgql, (err, data) => {
-    if (err) {
-      console.error('DB Error:', err);  
-      return res.json('error');
+// ✅ GET all students
+app.get('/', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM students ORDER BY id ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching students:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ✅ GET single student by ID
+app.get('/student/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM students WHERE id = $1', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Student not found' });
     }
-    return res.json(data.rows);  
-  });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error fetching student:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
-app.post('/create', (req, res) => {
+// ✅ CREATE student
+app.post('/create', async (req, res) => {
   const { name, email } = req.body;
-
-  const insert = "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *"; 
-  const values = [name, email];
-
-  db.query(insert, values, (err, result) => {
-    if (err) {
-      console.error('Error adding student:', err);
-      return res.status(500).json({ error: 'Failed to add student' });
-    }
-
-    return res.status(201).json(result.rows[0]); 
-  });
+  try {
+    const result = await pool.query(
+      'INSERT INTO students (name, email) VALUES ($1, $2) RETURNING *',
+      [name, email]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Error creating student:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
-// Update student by ID
-app.put('/update/:id', (req, res) => {
+// ✅ UPDATE student
+app.put('/update/:id', async (req, res) => {
   const { id } = req.params;
   const { name, email } = req.body;
-
-  const update = "UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *";
-
-  db.query(update, [name, email, id], (err, result) => {
-    if (err) {
-      console.error('Error updating student:', err);
-      return res.status(500).json({ error: 'Failed to update student' });
-    }
-
-    if (result.rowCount === 0) {
+  try {
+    const result = await pool.query(
+      'UPDATE students SET name = $1, email = $2 WHERE id = $3 RETURNING *',
+      [name, email, id]
+    );
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
-
-    return res.status(200).json(result.rows[0]);  
-  });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Error updating student:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
-
-// Delete student by ID
-app.delete('/delete/:id', (req, res) => {
-  const { id } = req.params;  
-
-  const deletesql = "DELETE FROM users WHERE id = $1 RETURNING *";  
-
-  db.query(deletesql, [id], (err, result) => {
-    if (err) {
-      console.error('Error deleting student:', err);
-      return res.status(500).json({ error: 'Failed to delete student' });
-    }
-
-    if (result.rowCount === 0) {
+// ✅ DELETE student
+app.delete('/delete/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM students WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Student not found' });
     }
-
-    return res.status(200).json({ message: 'Student deleted successfully' });
-  });
+    res.json({ message: 'Student deleted successfully' });
+  } catch (err) {
+    console.error('Error deleting student:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
 
-
-
-
-app.listen(8000, () => {
-  console.log('listening on port 8000');
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
 });
