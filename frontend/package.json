@@ -10,10 +10,15 @@
     "ag-grid-community": "^34.0.2",
     "ag-grid-react": "^34.0.2",
     "axios": "^1.10.0",
+    "bootstrap": "^5.3.7",
     "react": "^19.1.0",
+    "react-bootstrap": "^2.10.10",
+    "react-confirm-alert": "^3.0.6",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.3",
     "react-scripts": "5.0.1",
+    "react-toastify": "^11.0.5",
+    "sweetalert2": "^11.22.2",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
