@@ -1,17 +1,52 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import './App.css'; // custom styles
 
 function Student() {
   const [students, setStudents] = useState([]);
+  const [form, setForm] = useState({ name: '', email: '' });
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = () => {
     axios.get(`${process.env.REACT_APP_API_URL}/`)
       .then(res => setStudents(res.data))
       .catch(err => console.error('Error fetching students:', err));
-  }, []);
+  };
 
-  const handleDelete = (id) => {
+  const handleChange = e => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = e => {
+    e.preventDefault();
+    if (editingId) {
+      axios.put(`${process.env.REACT_APP_API_URL}/update/${editingId}`, form)
+        .then(() => {
+          fetchStudents();
+          setForm({ name: '', email: '' });
+          setEditingId(null);
+        })
+        .catch(err => console.error('Error updating student:', err));
+    } else {
+      axios.post(`${process.env.REACT_APP_API_URL}/create`, form)
+        .then(() => {
+          fetchStudents();
+          setForm({ name: '', email: '' });
+        })
+        .catch(err => console.error('Error creating student:', err));
+    }
+  };
+
+  const handleEdit = student => {
+    setForm({ name: student.name, email: student.email });
+    setEditingId(student.id);
+  };
+
+  const handleDelete = id => {
     if (window.confirm('Are you sure you want to delete this student?')) {
       axios.delete(`${process.env.REACT_APP_API_URL}/delete/${id}`)
         .then(() => {
@@ -22,10 +57,47 @@ function Student() {
   };
 
   return (
-    <div className='d-flex vh-100 bg-primary justify-content-center align-items-center'>
-      <div className='w-50 bg-white rounded p-3'>
-        <Link to='/create' className="btn btn-success mb-3">Add +</Link>
-        <table className='table table-bordered'>
+    <div className='container'>
+      <div className='form-card'>
+        <h2>{editingId ? 'Update Student' : 'Add New Student'}</h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            name="name"
+            placeholder="Name"
+            value={form.name}
+            onChange={handleChange}
+            required
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            required
+          />
+          <button type="submit" className="btn submit-btn">
+            {editingId ? 'Update' : 'Add'}
+          </button>
+          {editingId && (
+            <button
+              type="button"
+              className="btn cancel-btn"
+              onClick={() => {
+                setForm({ name: '', email: '' });
+                setEditingId(null);
+              }}
+            >
+              Cancel
+            </button>
+          )}
+        </form>
+      </div>
+
+      <div className='table-card'>
+        <h2>Student List</h2>
+        <table className='student-table'>
           <thead>
             <tr>
               <th>Name</th>
@@ -39,10 +111,8 @@ function Student() {
                 <td>{student.name}</td>
                 <td>{student.email}</td>
                 <td>
-                  <Link to={`/update/${student.id}`} className='btn btn-primary'>Update</Link>
-                  <button className='btn btn-danger ms-2' onClick={() => handleDelete(student.id)}>
-                    Delete
-                  </button>
+                  <button className='btn edit-btn' onClick={() => handleEdit(student)}>Edit</button>
+                  <button className='btn delete-btn' onClick={() => handleDelete(student.id)}>Delete</button>
                 </td>
               </tr>
             ))}
