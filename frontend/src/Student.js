@@ -1,160 +1,146 @@
-import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
-import { toast, ToastContainer } from 'react-toastify';
-import { confirmAlert } from 'react-confirm-alert';
-import { AgGridReact } from 'ag-grid-react';
-import 'react-toastify/dist/ReactToastify.css';
-import 'react-confirm-alert/src/react-confirm-alert.css';
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
-import './App.css'; // your custom CSS
+import React, { useEffect, useState, useRef } from "react";
+import axios from "axios";
+import { AgGridReact } from "ag-grid-react";
+import { ModuleRegistry, AllCommunityModule } from "ag-grid-community";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import "bootstrap/dist/css/bootstrap.min.css";
+
+// Register AG Grid Community modules
+ModuleRegistry.registerModules([AllCommunityModule]);
 
 function Student() {
   const [students, setStudents] = useState([]);
-  const [form, setForm] = useState({ name: '', email: '' });
+  const [form, setForm] = useState({ name: "", email: "" });
   const [editingId, setEditingId] = useState(null);
-  const [searchText, setSearchText] = useState('');
-  const gridApi = useRef(null);
+  const gridRef = useRef();
 
   useEffect(() => {
     fetchStudents();
+    // eslint-disable-next-line
   }, []);
 
-  const fetchStudents = () => {
-    axios.get(`${process.env.REACT_APP_API_URL}/api/students`)
-      .then(res => {
-        setStudents(res.data);
-        toast.success('Student list loaded');
-      })
-      .catch(() => toast.error('Failed to load student list'));
-  };
-
-  const onGridReady = params => {
-    gridApi.current = params.api;
-  };
-
-  const onSearchChange = e => {
-    setSearchText(e.target.value);
-    if (gridApi.current?.setQuickFilter) {
-      gridApi.current.setQuickFilter(e.target.value);
+  const fetchStudents = async () => {
+    try {
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/students`);
+      setStudents(res.data);
+    } catch {
+      toast.error("Failed to load students");
     }
   };
 
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const handleSubmit = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const method = editingId ? axios.put : axios.post;
-    const url = editingId
-      ? `${process.env.REACT_APP_API_URL}/api/students/${editingId}`
-      : `${process.env.REACT_APP_API_URL}/api/students`;
+    try {
+      if (editingId) {
+        await axios.put(`${process.env.REACT_APP_API_URL}/students/${editingId}`, form);
+        toast.success("Updated");
+      } else {
+        await axios.post(`${process.env.REACT_APP_API_URL}/students`, form);
+        toast.success("Created");
+      }
+      setForm({ name: "", email: "" });
+      setEditingId(null);
+      fetchStudents();
+    } catch {
+      toast.error("Error while submitting");
+    }
+  };
 
-    method(url, form)
-      .then(() => {
-        toast.success(editingId ? 'Student updated successfully' : 'Student added successfully');
+  const handleDelete = async (id) => {
+    if (window.confirm("Confirm delete?")) {
+      try {
+        await axios.delete(`${process.env.REACT_APP_API_URL}/students/${id}`);
+        toast.success("Deleted");
         fetchStudents();
-        setForm({ name: '', email: '' });
-        setEditingId(null);
-      })
-      .catch(() => toast.error('Action failed'));
+      } catch {
+        toast.error("Failed to delete");
+      }
+    }
   };
 
-  const handleEdit = student => {
-    setForm({ name: student.name, email: student.email });
-    setEditingId(student.id);
-  };
-
-  const handleDelete = id => {
-    confirmAlert({
-      title: 'Confirm Delete',
-      message: 'Are you sure you want to delete this student?',
-      buttons: [
-        {
-          label: 'Yes',
-          onClick: () => {
-            axios.delete(`${process.env.REACT_APP_API_URL}/api/students/${id}`)
-              .then(() => {
-                toast.success('Student deleted');
-                fetchStudents();
-              })
-              .catch(() => toast.error('Delete failed'));
-          }
-        },
-        {
-          label: 'No',
-          onClick: () => toast.info('Delete cancelled')
-        }
-      ]
-    });
-  };
-
-  const columnDefs = [
-    { headerName: 'Name', field: 'name', sortable: true, filter: 'agTextColumnFilter', flex: 1 },
-    { headerName: 'Email', field: 'email', sortable: true, filter: 'agTextColumnFilter', flex: 1 },
+  const columns = [
+    { headerName: "ID", field: "id", width: 80, filter: "agNumberColumnFilter" },
+    { headerName: "Name", field: "name", flex: 1, filter: "agTextColumnFilter" },
+    { headerName: "Email", field: "email", flex: 1, filter: "agTextColumnFilter" },
     {
-      headerName: 'Actions',
-      field: 'actions',
-      cellRenderer: params => (
-        <div className="d-flex gap-2 justify-content-center flex-wrap">
+      headerName: "Actions",
+      field: "id",
+      width: 180,
+      cellRendererFramework: (params) => (
+        <div className="d-flex gap-2">
           <button
-            className="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
-            onClick={() => handleEdit(params.data)}
-          >
-            <i className="bi bi-pencil-square"></i> Edit
+            className="btn btn-sm btn-primary"
+            onClick={() => {
+              setForm({ name: params.data.name, email: params.data.email });
+              setEditingId(params.data.id);
+            }}>
+            Edit
           </button>
           <button
-            className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-            onClick={() => handleDelete(params.data.id)}
-          >
-            <i className="bi bi-trash3"></i> Delete
+            className="btn btn-sm btn-danger"
+            onClick={() => handleDelete(params.data.id)}>
+            Delete
           </button>
         </div>
       ),
-      suppressMenu: true,
-      flex: 1
-    }
+    },
   ];
 
   return (
-    <div className="container py-4 px-3 px-md-5">
-      <ToastContainer position="top-right" autoClose={3000} />
-
-      <div className="card p-4 mb-4 rounded shadow-lg bg-glass">
-        <h3 className="text-center mb-3">{editingId ? 'Update Student' : 'Add Student'}</h3>
-        <form onSubmit={handleSubmit} className="d-grid gap-3">
-          <input type="text" name="name" placeholder="Name" value={form.name} onChange={handleChange} className="form-control" required />
-          <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} className="form-control" required />
-          <div className="text-center">
-            <button type="submit" className="btn btn-success me-2">{editingId ? 'Update' : 'Add'}</button>
-            {editingId && (
-              <button type="button" className="btn btn-secondary" onClick={() => { setForm({ name: '', email: '' }); setEditingId(null); }}>Cancel</button>
-            )}
-          </div>
-        </form>
-      </div>
-
-      <div className="d-flex flex-column flex-md-row justify-content-between gap-3 mb-3">
-        <h4 className="mb-0">Students List</h4>
+    <div className="container my-3">
+      <ToastContainer />
+      <form onSubmit={handleSubmit} className="mb-3">
         <input
           type="text"
-          placeholder="Search students..."
-          className="form-control search-bar"
-          value={searchText}
-          onChange={onSearchChange}
-          style={{ maxWidth: 300, minWidth: 200 }}
+          placeholder="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          required
+          className="form-control mb-2"
+        />
+        <input
+          type="email"
+          placeholder="Email"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          required
+          className="form-control mb-2"
+        />
+        <button type="submit" className="btn btn-success me-2">
+          {editingId ? "Update" : "Add"}
+        </button>
+        {editingId && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setForm({ name: "", email: "" });
+              setEditingId(null);
+            }}>
+            Cancel
+          </button>
+        )}
+      </form>
+      <div className="mb-2">
+        <input
+          type="text"
+          placeholder="Search..."
+          onInput={(e) => gridRef.current.api.setQuickFilter(e.target.value)}
+          className="form-control"
         />
       </div>
-
-      <div className="ag-theme-alpine rounded shadow-lg" style={{ height: '60vh', width: '100%' }}>
+      <div className="ag-theme-alpine" style={{ height: 400 }}>
         <AgGridReact
-          onGridReady={onGridReady}
+          ref={gridRef}
           rowData={students}
-          columnDefs={columnDefs}
+          columnDefs={columns}
           defaultColDef={{ sortable: true, filter: true, resizable: true }}
           pagination
           paginationPageSize={5}
-          quickFilterText={searchText}
-          overlayNoRowsTemplate="No students found"
+          theme="legacy"   // <-- Fixes AG Grid v33+ theming error
         />
       </div>
     </div>
