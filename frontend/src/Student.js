@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import { AgGridReact } from "ag-grid-react";
 import { ModuleRegistry, AllCommunityModule } from "ag-grid-community";
@@ -9,7 +9,7 @@ import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./StudentCustom.css";
 
-// AG Grid module registration
+// AG Grid module registration (fixes error #272)
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 function Student() {
@@ -17,25 +17,27 @@ function Student() {
   const [form, setForm] = useState({ name: "", email: "" });
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
-  const [pendingDelete, setPendingDelete] = useState(null); // For custom delete alert
+  const [pendingDelete, setPendingDelete] = useState(null); // For delete confirmation toast
   const gridApi = useRef(null);
 
   const apiUrl = process.env.REACT_APP_API_URL;
 
-  useEffect(() => { fetchStudents(); }, []);
-
-  const fetchStudents = async () => {
+  // --- useCallback for ESLint compliance ---
+  const fetchStudents = useCallback(async () => {
     try {
       const res = await axios.get(`${apiUrl}/students`);
       setStudents(res.data);
-      // Restore search if page reloads
       if (gridApi.current && typeof gridApi.current.setQuickFilter === "function") {
         gridApi.current.setQuickFilter(search);
       }
     } catch {
       toast.error("Failed to load data");
     }
-  };
+  }, [apiUrl, search]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,7 +57,7 @@ function Student() {
     }
   };
 
-  // "Delete" workflow with react-toastify custom dialog
+  // Custom delete confirmation dialog with react-toastify, not JS alert
   const handleDelete = (id) => {
     setPendingDelete(id);
     toast.info(
@@ -124,16 +126,20 @@ function Student() {
     { headerName: "Email", field: "email", flex: 1 },
     {
       headerName: "Actions",
-      cellRenderer: ActionCellRenderer,
+      cellRenderer: ActionCellRenderer,     // <-- AG Grid v28+ : pass React function to cellRenderer
       width: 180
     }
   ];
 
   const onGridReady = (params) => {
     gridApi.current = params.api;
+    // If you want the quick filter to always reflect the last search state (even after reload), do:
+    if (search && typeof params.api.setQuickFilter === "function") {
+      params.api.setQuickFilter(search);
+    }
   };
 
-  // Search: works via Search button or Enter key
+  // Search (via Search button or Enter key)
   const handleSearch = () => {
     if (gridApi.current && typeof gridApi.current.setQuickFilter === "function") {
       gridApi.current.setQuickFilter(search);
@@ -185,7 +191,7 @@ function Student() {
             className="form-control"
             placeholder="Search..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={e => setSearch(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
           />
           <button
@@ -204,7 +210,7 @@ function Student() {
             pagination
             paginationPageSize={5}
             onGridReady={onGridReady}
-            theme="legacy"
+            theme="legacy"  // <-- fixes AG Grid error #239
           />
         </div>
       </div>
