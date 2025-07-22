@@ -54,3 +54,22 @@ body, .custom-bg {
     font-size: 0.98rem;
   }
 }
+.autocomplete-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 999;
+}
+
+.search-suggestion-item:hover {
+  background-color: #f0f0f0;
+}
+
+.autocomplete-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1050;
+}
+
+.search-suggestion-item:hover {
+  background-color: #f1f1f1;
+}
